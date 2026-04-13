@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DoseViz — Pharmacometrics Visualizer</title>
+  <meta name="description" content="Interactive PK/PD visualizer for pharmacometrics education. Explore how dose and dosing frequency drive drug concentration, biomarker suppression, and delayed clinical benefit." />
+
+  <!-- Preconnect for CDN fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js v4 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ── Page Header ─────────────────────────────────────────────────────── -->
+  <header class="page-header">
+    <h1>DoseViz &mdash; Pharmacometrics Visualizer</h1>
+    <p>Explore how dose and frequency drive concentration, biomarker suppression, and delayed clinical benefit.</p>
+  </header>
+
+  <!-- ── Model Schematic ─────────────────────────────────────────────────── -->
+  <section class="schematic-section" aria-label="Model diagram">
+    <div class="schematic" role="img" aria-label="Sequential model: Dose → Concentration → Biomarker → Clinical Benefit">
+
+      <div class="schematic-box dose">
+        <span class="box-label">Dose</span>
+        <span class="box-sub">Input</span>
+      </div>
+
+      <div class="schematic-arrow" aria-hidden="true">&#8594;</div>
+
+      <div class="schematic-box pk">
+        <span class="box-label">Concentration</span>
+        <span class="box-sub">PK model</span>
+      </div>
+
+      <div class="schematic-arrow" aria-hidden="true">&#8594;</div>
+
+      <div class="schematic-box pd">
+        <span class="box-label">Biomarker</span>
+        <span class="box-sub">PD model (k<sub>in</sub> inh.)</span>
+      </div>
+
+      <div class="schematic-arrow" aria-hidden="true">&#8594;</div>
+
+      <div class="schematic-box ben">
+        <span class="box-label">Clinical Benefit</span>
+        <span class="box-sub">Delayed response</span>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Main Layout ─────────────────────────────────────────────────────── -->
+  <main class="main-layout">
+
+    <!-- Controls Panel -->
+    <aside class="controls-panel" aria-label="Simulation controls">
+      <h2>Parameters</h2>
+
+      <!-- Dose slider -->
+      <div class="control-group">
+        <label for="doseSlider">
+          Dose &mdash; <span class="dose-value" id="doseLabel">1.0</span> mg
+        </label>
+        <input
+          type="range"
+          id="doseSlider"
+          min="0.1"
+          max="10"
+          step="0.1"
+          value="1"
+          aria-label="Dose in milligrams"
+        />
+        <span class="hint">Drag to adjust dose per administration</span>
+      </div>
+
+      <!-- Dosing frequency -->
+      <div class="control-group">
+        <label for="freqSelect">Dosing Frequency</label>
+        <select id="freqSelect" aria-label="Dosing frequency">
+          <option value="1"   selected>Once daily (QD)</option>
+          <option value="0.5">Twice daily (BID)</option>
+          <option value="2">Every other day (Q2D)</option>
+          <option value="7">Once weekly (QW)</option>
+        </select>
+      </div>
+
+      <!-- Time horizon toggle -->
+      <div class="control-group">
+        <label>Time Horizon</label>
+        <div class="view-toggle" role="group" aria-label="Time horizon">
+          <button class="toggle-btn active" data-view="short" type="button">
+            Short-term<br/>14 Days
+          </button>
+          <button class="toggle-btn" data-view="long" type="button">
+            Long-term<br/>6 Months
+          </button>
+        </div>
+      </div>
+
+      <!-- Parameter reference -->
+      <div class="params-info">
+        <p>
+          <strong>PK:</strong> t&frac12;<sub>abs</sub>=1 h,
+          t&frac12;<sub>elim</sub>=18 h, V=50 L<br/>
+          <strong>PD:</strong> k<sub>out</sub>=0.15 day<sup>&minus;1</sup>,
+          E<sub>max</sub>=1, EC<sub>50</sub>=0.04 mg/L<br/>
+          <strong>Benefit:</strong> k<sub>onset</sub>=0.015 day<sup>&minus;1</sup>
+        </p>
+      </div>
+    </aside>
+
+    <!-- Charts Area -->
+    <section class="charts-area" aria-live="polite" aria-label="Simulation charts">
+
+      <div class="chart-card">
+        <h3>Drug Concentration <span id="labelConc">vs. Time (0&ndash;14 days)</span></h3>
+        <canvas id="chartConc" aria-label="Concentration vs time"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <h3>Biomarker Level <span id="labelBiomarker">vs. Time (0&ndash;14 days)</span></h3>
+        <canvas id="chartBiomarker" aria-label="Biomarker vs time"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <h3>Clinical Benefit <span id="labelBenefit">vs. Time (0&ndash;14 days)</span></h3>
+        <canvas id="chartBenefit" aria-label="Clinical benefit vs time"></canvas>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Scripts — order matters: simulation → charts → app -->
+  <script src="js/simulation.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
