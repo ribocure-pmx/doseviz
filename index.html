@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DoseViz — Pharmacometrics Visualizer</title>
-  <meta name="description" content="Interactive PK/PD visualizer for pharmacometrics education. Explore how dose and dosing frequency drive drug concentration, biomarker suppression, and delayed clinical benefit." />
+  <meta name="description" content="Interactive PK/PD visualizer for pharmacometrics education. Explore how dose and dosing frequency drive drug concentration, biomarker suppression, delayed clinical benefit, and safety monitoring." />
 
   <!-- Preconnect for CDN fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -21,37 +21,44 @@
   <!-- ── Page Header ─────────────────────────────────────────────────────── -->
   <header class="page-header">
     <h1>DoseViz &mdash; Pharmacometrics Visualizer</h1>
-    <p>Explore how dose and frequency drive concentration, biomarker suppression, and delayed clinical benefit.</p>
+    <p>Explore how dose and frequency drive concentration, biomarker suppression, delayed clinical benefit, and safety response.</p>
   </header>
 
   <!-- ── Model Schematic ─────────────────────────────────────────────────── -->
   <section class="schematic-section" aria-label="Model diagram">
-    <div class="schematic" role="img" aria-label="Sequential model: Dose → Concentration → Biomarker → Clinical Benefit">
+    <div class="schematic" role="img" aria-label="Model: Dose → Concentration → Biomarker → Clinical Benefit; Concentration → Safety Biomarker → Safety Events">
 
       <div class="schematic-box dose">
         <span class="box-label">Dose</span>
-        <span class="box-sub">Input</span>
       </div>
 
       <div class="schematic-arrow" aria-hidden="true">&#8594;</div>
 
       <div class="schematic-box pk">
         <span class="box-label">Concentration</span>
-        <span class="box-sub">PK model</span>
       </div>
 
-      <div class="schematic-arrow" aria-hidden="true">&#8594;</div>
-
-      <div class="schematic-box pd">
-        <span class="box-label">Biomarker</span>
-        <span class="box-sub">PD model (k<sub>in</sub> inh.)</span>
-      </div>
-
-      <div class="schematic-arrow" aria-hidden="true">&#8594;</div>
-
-      <div class="schematic-box ben">
-        <span class="box-label">Clinical Benefit</span>
-        <span class="box-sub">Delayed response</span>
+      <div class="schematic-branch">
+        <div class="schematic-branch-row">
+          <div class="schematic-arrow" aria-hidden="true">&#8594;</div>
+          <div class="schematic-box pd">
+            <span class="box-label">Biomarker</span>
+          </div>
+          <div class="schematic-arrow" aria-hidden="true">&#8594;</div>
+          <div class="schematic-box ben">
+            <span class="box-label">Clinical Benefit</span>
+          </div>
+        </div>
+        <div class="schematic-branch-row">
+          <div class="schematic-arrow" aria-hidden="true">&#8594;</div>
+          <div class="schematic-box safety">
+            <span class="box-label">Safety Biomarker</span>
+          </div>
+          <div class="schematic-arrow" aria-hidden="true">&#8594;</div>
+          <div class="schematic-box safety-event">
+            <span class="box-label">Safety Events</span>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -112,7 +119,9 @@
           t&frac12;<sub>elim</sub>=18 h, V=50 L<br/>
           <strong>PD:</strong> k<sub>out</sub>=0.15 day<sup>&minus;1</sup>,
           E<sub>max</sub>=1, EC<sub>50</sub>=0.04 mg/L<br/>
-          <strong>Benefit:</strong> k<sub>onset</sub>=0.015 day<sup>&minus;1</sup>
+          <strong>Benefit:</strong> k<sub>onset</sub>=0.015 day<sup>&minus;1</sup><br/>
+          <strong>Safety:</strong> k<sub>out</sub>=0.05 day<sup>&minus;1</sup>,
+          EC<sub>50</sub>=0.3 mg/L, n=3
         </p>
       </div>
     </aside>
@@ -125,14 +134,28 @@
         <canvas id="chartConc" aria-label="Concentration vs time"></canvas>
       </div>
 
-      <div class="chart-card">
-        <h3>Biomarker Level <span id="labelBiomarker">vs. Time (0&ndash;14 days)</span></h3>
-        <canvas id="chartBiomarker" aria-label="Biomarker vs time"></canvas>
+      <div class="chart-row">
+        <div class="chart-card">
+          <h3>Biomarker Level <span id="labelBiomarker">vs. Time (0&ndash;14 days)</span></h3>
+          <canvas id="chartBiomarker" aria-label="Biomarker vs time"></canvas>
+        </div>
+
+        <div class="chart-card">
+          <h3>Safety Biomarker <span id="labelSafety">vs. Time (0&ndash;14 days)</span></h3>
+          <canvas id="chartSafety" aria-label="Safety biomarker vs time"></canvas>
+        </div>
       </div>
 
-      <div class="chart-card">
-        <h3>Clinical Benefit <span id="labelBenefit">vs. Time (0&ndash;14 days)</span></h3>
-        <canvas id="chartBenefit" aria-label="Clinical benefit vs time"></canvas>
+      <div class="chart-row">
+        <div class="chart-card">
+          <h3>Event-free Survival &mdash; Benefit <span id="labelBenefit">vs. Time (0&ndash;14 days)</span></h3>
+          <canvas id="chartBenefit" aria-label="Event-free survival (benefit) vs time"></canvas>
+        </div>
+
+        <div class="chart-card">
+          <h3>Cumulative Safety Events <span id="labelSafetyEvent">vs. Time (0&ndash;14 days)</span></h3>
+          <canvas id="chartSafetyEvent" aria-label="Cumulative safety events vs time"></canvas>
+        </div>
       </div>
 
     </section>

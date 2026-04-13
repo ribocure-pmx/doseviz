@@ -16,13 +16,18 @@ Chart.defaults.color       = '#555';
 const BLUE       = 'rgb(59, 130, 246)';
 const RED        = 'rgb(239, 68, 68)';
 const GREEN      = 'rgb(34, 197, 94)';
-const BLUE_FILL  = 'rgba(59, 130, 246, 0.08)';
-const RED_FILL   = 'rgba(239, 68, 68, 0.08)';
-const GREEN_FILL = 'rgba(34, 197, 94, 0.10)';
+const BLUE_FILL   = 'rgba(59, 130, 246, 0.08)';
+const RED_FILL    = 'rgba(239, 68, 68, 0.08)';
+const GREEN_FILL  = 'rgba(34, 197, 94, 0.10)';
+const ORANGE      = 'rgb(249, 115, 22)';
+const ORANGE_FILL = 'rgba(249, 115, 22, 0.09)';
+const GRAY        = 'rgba(100, 116, 139, 0.75)';
 
-let chartConc      = null;
-let chartBiomarker = null;
-let chartBenefit   = null;
+let chartConc        = null;
+let chartBiomarker   = null;
+let chartBenefit     = null;
+let chartSafety      = null;
+let chartSafetyEvent = null;
 
 // ─── Shared x-axis configs ────────────────────────────────────────────────────
 
@@ -102,6 +107,7 @@ function buildBiomarkerChart(ctx) {
           fill: true,
           tension: 0.3,
           pointRadius: 0,
+          pointStyle: 'line',
           borderWidth: 2,
           order: 1,
         },
@@ -112,6 +118,7 @@ function buildBiomarkerChart(ctx) {
           borderDash: [5, 4],
           borderWidth: 1.5,
           pointRadius: 0,
+          pointStyle: 'line',
           fill: false,
           tension: 0,
           order: 2,
@@ -127,6 +134,7 @@ function buildBiomarkerChart(ctx) {
       plugins: {
         legend: {
           display: true,
+          onClick: () => {},
           labels: { boxWidth: 14, padding: 10, usePointStyle: true },
         },
         tooltip: {
@@ -150,15 +158,79 @@ function buildBiomarkerChart(ctx) {
   });
 }
 
-function buildBenefitChart(ctx) {
+function buildBenefitSurvivalChart(ctx) {
+  return new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [
+        {
+          label: 'Treatment',
+          data: [],
+          borderColor: GREEN,
+          backgroundColor: 'transparent',
+          fill: false,
+          tension: 0.3,
+          pointRadius: 0,
+          pointStyle: 'line',
+          borderWidth: 2.5,
+          order: 1,
+        },
+        {
+          label: 'Std. of Care',
+          data: [],
+          borderColor: GRAY,
+          backgroundColor: 'transparent',
+          borderDash: [6, 4],
+          fill: false,
+          tension: 0,
+          pointRadius: 0,
+          pointStyle: 'line',
+          borderWidth: 1.5,
+          order: 2,
+        },
+      ],
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: true,
+      parsing: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          onClick: () => {},
+          labels: { boxWidth: 14, padding: 10, usePointStyle: true },
+        },
+        tooltip: {
+          callbacks: {
+            title: items => `${items[0].chart.options.scales.x.title.text.replace('Time ', '')} ${items[0].parsed.x.toFixed(1)}`,
+            label: item  => ` ${item.dataset.label}: ${item.parsed.y.toFixed(1)} %`,
+          },
+        },
+      },
+      scales: {
+        x: { ...xDays },
+        y: {
+          title: { display: true, text: 'Event-free Survival (%)' },
+          min: 0,
+          max: 110,
+          ticks: { maxTicksLimit: 6 },
+        },
+      },
+    },
+  });
+}
+
+function buildSafetyChart(ctx) {
   return new Chart(ctx, {
     type: 'line',
     data: {
       datasets: [{
-        label: 'Clinical Benefit (%)',
+        label: 'Safety Biomarker Increase (%)',
         data: [],
-        borderColor: GREEN,
-        backgroundColor: GREEN_FILL,
+        borderColor: ORANGE,
+        backgroundColor: ORANGE_FILL,
         fill: true,
         tension: 0.3,
         pointRadius: 0,
@@ -176,14 +248,78 @@ function buildBenefitChart(ctx) {
         tooltip: {
           callbacks: {
             title: items => `${items[0].chart.options.scales.x.title.text.replace('Time ', '')} ${items[0].parsed.x.toFixed(1)}`,
-            label: item  => ` ${item.parsed.y.toFixed(1)} %`,
+            label: item  => ` +${item.parsed.y.toFixed(1)} %`,
           },
         },
       },
       scales: {
         x: { ...xDays },
         y: {
-          title: { display: true, text: 'Clinical Benefit (%)' },
+          title: { display: true, text: 'Increase above baseline (%)' },
+          min: 0,
+          suggestedMax: 100,
+          ticks: { maxTicksLimit: 6 },
+        },
+      },
+    },
+  });
+}
+
+function buildSafetyEventChart(ctx) {
+  return new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [
+        {
+          label: 'Treatment',
+          data: [],
+          borderColor: ORANGE,
+          backgroundColor: 'transparent',
+          fill: false,
+          tension: 0.3,
+          pointRadius: 0,
+          pointStyle: 'line',
+          borderWidth: 2.5,
+          order: 1,
+        },
+        {
+          label: 'Std. of Care',
+          data: [],
+          borderColor: GRAY,
+          backgroundColor: 'transparent',
+          borderDash: [6, 4],
+          fill: false,
+          tension: 0,
+          pointRadius: 0,
+          pointStyle: 'line',
+          borderWidth: 1.5,
+          order: 2,
+        },
+      ],
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: true,
+      parsing: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          onClick: () => {},
+          labels: { boxWidth: 14, padding: 10, usePointStyle: true },
+        },
+        tooltip: {
+          callbacks: {
+            title: items => `${items[0].chart.options.scales.x.title.text.replace('Time ', '')} ${items[0].parsed.x.toFixed(1)}`,
+            label: item  => ` ${item.dataset.label}: ${item.parsed.y.toFixed(1)} %`,
+          },
+        },
+      },
+      scales: {
+        x: { ...xDays },
+        y: {
+          title: { display: true, text: 'Patients with Safety Event (%)' },
           min: 0,
           max: 100,
           ticks: { maxTicksLimit: 6 },
@@ -191,6 +327,22 @@ function buildBenefitChart(ctx) {
       },
     },
   });
+}
+
+// ─── Y-axis ceiling helper ────────────────────────────────────────────────────
+
+/**
+ * Round v up to a clean number suitable as a chart axis maximum.
+ * E.g. 0.34 → 0.5,  0.07 → 0.1,  1.8 → 2,  6.5 → 10
+ */
+function niceYMax(v) {
+  if (v <= 0) return 1;
+  const mag   = Math.pow(10, Math.floor(Math.log10(v)));
+  const steps = [1, 1.5, 2, 2.5, 5, 10];
+  for (const s of steps) {
+    if (v <= s * mag) return s * mag;
+  }
+  return 10 * mag;
 }
 
 // ─── Axis switcher ────────────────────────────────────────────────────────────
@@ -203,9 +355,11 @@ function setXAxis(chart, cfg) {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 function initCharts() {
-  chartConc      = buildConcChart(document.getElementById('chartConc').getContext('2d'));
-  chartBiomarker = buildBiomarkerChart(document.getElementById('chartBiomarker').getContext('2d'));
-  chartBenefit   = buildBenefitChart(document.getElementById('chartBenefit').getContext('2d'));
+  chartConc        = buildConcChart(document.getElementById('chartConc').getContext('2d'));
+  chartBiomarker   = buildBiomarkerChart(document.getElementById('chartBiomarker').getContext('2d'));
+  chartBenefit     = buildBenefitSurvivalChart(document.getElementById('chartBenefit').getContext('2d'));
+  chartSafety      = buildSafetyChart(document.getElementById('chartSafety').getContext('2d'));
+  chartSafetyEvent = buildSafetyEventChart(document.getElementById('chartSafetyEvent').getContext('2d'));
 }
 
 /**
@@ -228,8 +382,9 @@ function updateCharts(data, view) {
   // Baseline line endpoints follow the x-axis range
   const xEnd = isShort ? 14 : 6;
 
-  // Concentration
+  // Concentration — y-axis fixed to Cmax at max slider dose so scale never jumps
   setXAxis(chartConc, xCfg);
+  chartConc.options.scales.y.max = niceYMax(src.concYMax);
   chartConc.data.datasets[0].data = xVals.map((x, i) => ({ x, y: src.conc[i] }));
   chartConc.update('none');
 
@@ -239,8 +394,20 @@ function updateCharts(data, view) {
   chartBiomarker.data.datasets[1].data = [{ x: 0, y: 100 }, { x: xEnd, y: 100 }];
   chartBiomarker.update('none');
 
-  // Benefit
+  // Benefit survival (treatment vs SoC)
   setXAxis(chartBenefit, xCfg);
-  chartBenefit.data.datasets[0].data = xVals.map((x, i) => ({ x, y: src.benefit[i] }));
+  chartBenefit.data.datasets[0].data = xVals.map((x, i) => ({ x, y: src.benefitSurvival[i] }));
+  chartBenefit.data.datasets[1].data = xVals.map((x, i) => ({ x, y: src.socBenefitSurvival[i] }));
   chartBenefit.update('none');
+
+  // Safety Biomarker (show increase above baseline: S − 100)
+  setXAxis(chartSafety, xCfg);
+  chartSafety.data.datasets[0].data = xVals.map((x, i) => ({ x, y: src.safety[i] - 100 }));
+  chartSafety.update('none');
+
+  // Cumulative safety events: 100 − survival (increasing from 0)
+  setXAxis(chartSafetyEvent, xCfg);
+  chartSafetyEvent.data.datasets[0].data = xVals.map((x, i) => ({ x, y: 100 - src.safetyEventSurvival[i] }));
+  chartSafetyEvent.data.datasets[1].data = xVals.map((x, i) => ({ x, y: 100 - src.socSafetySurvival[i] }));
+  chartSafetyEvent.update('none');
 }

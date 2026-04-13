@@ -15,6 +15,7 @@
   --blue:      #3b82f6;
   --red:       #ef4444;
   --green:     #22c55e;
+  --orange:    #f97316;
   --text:      #1e293b;
   --muted:     #64748b;
   --border:    #e2e8f0;
@@ -78,7 +79,7 @@ body {
   border: 1.5px solid var(--border);
   border-radius: var(--radius);
   padding: 0.45rem 1rem;
-  min-width: 110px;
+  width: 120px;
   text-align: center;
   box-shadow: var(--shadow);
   gap: 0.1rem;
@@ -98,8 +99,21 @@ body {
 
 .schematic-box.pk   { border-color: #93c5fd; }
 .schematic-box.pd   { border-color: #fca5a5; }
-.schematic-box.ben  { border-color: #86efac; }
-.schematic-box.dose { border-color: #cbd5e1; }
+.schematic-box.ben    { border-color: #86efac; }
+.schematic-box.dose   { border-color: #cbd5e1; }
+.schematic-box.safety       { border-color: #fdba74; }  /* orange-300 */
+.schematic-box.safety-event { border-color: #ea580c; }  /* orange-600 */
+
+.schematic-branch {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.schematic-branch-row {
+  display: flex;
+  align-items: center;
+}
 
 .schematic-arrow {
   font-size: 1.3rem;
@@ -316,6 +330,14 @@ select:focus {
   color: var(--text);
 }
 
+/* ─── Paired survival charts (side-by-side row) ────────────────────────────── */
+
+.chart-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.1rem;
+}
+
 /* ─── Mobile (≤ 767px) ─────────────────────────────────────────────────────── */
 
 @media (max-width: 767px) {
@@ -329,7 +351,39 @@ select:focus {
 
   .schematic-section {
     padding: 0.9rem 1rem 0.4rem;
-    overflow-x: auto;
+  }
+
+  /* Stack the whole schematic vertically */
+  .schematic {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Dose → Concentration arrow becomes ↓ */
+  .schematic > .schematic-arrow {
+    transform: rotate(90deg);
+  }
+
+  /* Single ↓ injected before the two-chain branch block */
+  .schematic-branch::before {
+    content: '↓';
+    display: block;
+    font-size: 1.3rem;
+    color: var(--muted);
+    text-align: center;
+    width: 100%;
+    line-height: 1;
+    padding: 0 0.3rem;
+  }
+
+  /* Hide the leading → in each branch row (was connecting from Concentration) */
+  .schematic-branch-row > .schematic-arrow:first-child {
+    display: none;
+  }
+
+  /* Keep paired boxes centred within each row */
+  .schematic-branch-row {
+    justify-content: center;
   }
 
   .main-layout {
@@ -340,6 +394,10 @@ select:focus {
 
   .controls-panel {
     gap: 1.1rem;
+  }
+
+  .chart-row {
+    grid-template-columns: 1fr;
   }
 
   .chart-card canvas {

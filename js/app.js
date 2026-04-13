@@ -22,9 +22,11 @@ function syncToggle() {
     btn.classList.toggle('active', btn.dataset.view === currentView);
   });
   const suffix = currentView === 'short' ? '0\u201314 days' : '0\u20136 months';
-  document.getElementById('labelConc').textContent      = `vs. Time (${suffix})`;
-  document.getElementById('labelBiomarker').textContent = `vs. Time (${suffix})`;
-  document.getElementById('labelBenefit').textContent   = `vs. Time (${suffix})`;
+  document.getElementById('labelConc').textContent        = `vs. Time (${suffix})`;
+  document.getElementById('labelBiomarker').textContent   = `vs. Time (${suffix})`;
+  document.getElementById('labelBenefit').textContent     = `vs. Time (${suffix})`;
+  document.getElementById('labelSafety').textContent      = `vs. Time (${suffix})`;
+  document.getElementById('labelSafetyEvent').textContent = `vs. Time (${suffix})`;
 }
 
 function refresh() {
