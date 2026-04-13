@@ -1,0 +1,43 @@
+{
+  "name": "JavaScript Dev Container",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+
+  // Features to add to the dev container
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // VS Code settings applied inside the container
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.tabSize": 2,
+        "npm.packageManager": "npm"
+      },
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "christian-kohler.npm-intellisense",
+        "streetsidesoftware.code-spell-checker",
+        "eamodio.gitlens"
+      ]
+    }
+  },
+
+  // Forward common local dev ports
+  "forwardPorts": [3000, 5173, 8080],
+  "portsAttributes": {
+    "3000": { "label": "App (Node/Express)", "onAutoForward": "notify" },
+    "5173": { "label": "App (Vite)", "onAutoForward": "notify" },
+    "8080": { "label": "App (Generic)", "onAutoForward": "notify" }
+  },
+
+  // Run after the container is created
+  "postCreateCommand": "[ -f package.json ] && npm install || echo 'No package.json found, skipping npm install'",
+
+  // Run as non-root user (included in the base image)
+  "remoteUser": "node"
+}
