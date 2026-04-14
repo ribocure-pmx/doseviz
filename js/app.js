@@ -7,6 +7,8 @@
 
 'use strict';
 
+const EXPORT_MODE = new URLSearchParams(window.location.search).has('export');
+
 let currentView      = 'short';  // 'short' | 'long'
 let debounceTimer    = null;
 let showObservedData = false;
@@ -42,7 +44,8 @@ function debouncedRefresh() {
 }
 
 function init() {
-  initCharts();
+  if (EXPORT_MODE) document.body.classList.add('export-mode');
+  initCharts(EXPORT_MODE);
 
   const doseSlider = document.getElementById('doseSlider');
   const doseLabel  = document.getElementById('doseLabel');
@@ -70,6 +73,23 @@ function init() {
 
   syncToggle();
   refresh();
+
+  if (EXPORT_MODE) {
+    document.querySelectorAll('.chart-card').forEach(card => {
+      const canvas = card.querySelector('canvas');
+      const title  = card.querySelector('h3').textContent.trim().replace(/\s+/g, '_');
+      const btn    = document.createElement('button');
+      btn.className   = 'save-png-btn';
+      btn.textContent = 'Save PNG';
+      btn.addEventListener('click', () => {
+        const link    = document.createElement('a');
+        link.download = title + '.png';
+        link.href     = canvas.toDataURL('image/png');
+        link.click();
+      });
+      card.appendChild(btn);
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

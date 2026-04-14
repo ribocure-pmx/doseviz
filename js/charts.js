@@ -52,12 +52,12 @@ function scatterDs(color, label) {
 }
 
 /** KM step-function dataset (dashed stepped line, no points). */
-function kmDs(color, label) {
+function kmDs(color, label, em = false) {
   return {
     label, data: [],
     borderColor: color, backgroundColor: 'transparent',
     fill: false, tension: 0, stepped: 'after',
-    pointRadius: 0, borderWidth: 1.5,
+    pointRadius: 0, pointStyle: 'line', borderWidth: em ? 2.5 : 1.5,
     borderDash: [4, 3],
   };
 }
@@ -88,7 +88,7 @@ const xMonths = {
 
 // ─── Chart factories ──────────────────────────────────────────────────────────
 
-function buildConcChart(ctx) {
+function buildConcChart(ctx, em = false) {
   return new Chart(ctx, {
     type: 'line',
     data: {
@@ -101,7 +101,7 @@ function buildConcChart(ctx) {
           fill: true,
           tension: 0.3,
           pointRadius: 0,
-          borderWidth: 2,
+          borderWidth: em ? 3 : 2,
         },
         scatterDs(BLUE_SCATTER, 'Observed'),
       ],
@@ -113,7 +113,15 @@ function buildConcChart(ctx) {
       parsing: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: false },
+        legend: {
+            display: true,
+            onClick: () => {},
+            labels: {
+              boxWidth: em ? 18 : 14, padding: em ? 14 : 10, usePointStyle: true,
+              filter: (item, data) => data.datasets[item.datasetIndex].data.length > 0,
+              ...(em ? { font: { size: 15 } } : {}),
+            },
+          },
         tooltip: {
           callbacks: {
             title: items => `${items[0].chart.options.scales.x.title.text.replace('Time ', '')} ${items[0].parsed.x.toFixed(1)}`,
@@ -136,7 +144,7 @@ function buildConcChart(ctx) {
   });
 }
 
-function buildBiomarkerChart(ctx) {
+function buildBiomarkerChart(ctx, em = false) {
   return new Chart(ctx, {
     type: 'line',
     data: {
@@ -150,7 +158,7 @@ function buildBiomarkerChart(ctx) {
           tension: 0.3,
           pointRadius: 0,
           pointStyle: 'line',
-          borderWidth: 2,
+          borderWidth: em ? 3 : 2,
           order: 1,
         },
         {
@@ -158,7 +166,7 @@ function buildBiomarkerChart(ctx) {
           data: [{ x: 0, y: 100 }, { x: 14, y: 100 }],
           borderColor: 'rgba(100,100,100,0.4)',
           borderDash: [5, 4],
-          borderWidth: 1.5,
+          borderWidth: em ? 2 : 1.5,
           pointRadius: 0,
           pointStyle: 'line',
           fill: false,
@@ -179,8 +187,9 @@ function buildBiomarkerChart(ctx) {
           display: true,
           onClick: () => {},
           labels: {
-            boxWidth: 14, padding: 10, usePointStyle: true,
+            boxWidth: em ? 18 : 14, padding: em ? 14 : 10, usePointStyle: true,
             filter: (item, data) => data.datasets[item.datasetIndex].data.length > 0,
+            ...(em ? { font: { size: 15 } } : {}),
           },
         },
         tooltip: {
@@ -204,7 +213,7 @@ function buildBiomarkerChart(ctx) {
   });
 }
 
-function buildBenefitSurvivalChart(ctx) {
+function buildBenefitSurvivalChart(ctx, em = false) {
   return new Chart(ctx, {
     type: 'line',
     data: {
@@ -218,7 +227,7 @@ function buildBenefitSurvivalChart(ctx) {
           tension: 0.3,
           pointRadius: 0,
           pointStyle: 'line',
-          borderWidth: 2.5,
+          borderWidth: em ? 3.5 : 2.5,
           order: 1,
         },
         {
@@ -231,11 +240,11 @@ function buildBenefitSurvivalChart(ctx) {
           tension: 0,
           pointRadius: 0,
           pointStyle: 'line',
-          borderWidth: 1.5,
+          borderWidth: em ? 2.5 : 1.5,
           order: 2,
         },
-        kmDs(GREEN_KM, 'Treatment (KM)'),
-        kmDs(GRAY_KM,  'Std. of Care (KM)'),
+        kmDs(GREEN_KM, 'Treatment (KM)', em),
+        kmDs(GRAY_KM,  'Std. of Care (KM)', em),
       ],
     },
     options: {
@@ -249,8 +258,9 @@ function buildBenefitSurvivalChart(ctx) {
           display: true,
           onClick: () => {},
           labels: {
-            boxWidth: 14, padding: 10, usePointStyle: true,
+            boxWidth: em ? 18 : 14, padding: em ? 14 : 10, usePointStyle: true,
             filter: (item, data) => data.datasets[item.datasetIndex].data.length > 0,
+            ...(em ? { font: { size: 15 } } : {}),
           },
         },
         tooltip: {
@@ -266,14 +276,14 @@ function buildBenefitSurvivalChart(ctx) {
           title: { display: true, text: 'Event-free Survival (%)' },
           min: 0,
           max: 110,
-          ticks: { maxTicksLimit: 6 },
+          ticks: { maxTicksLimit: 6, callback: v => v <= 100 ? v : '' },
         },
       },
     },
   });
 }
 
-function buildSafetyChart(ctx) {
+function buildSafetyChart(ctx, em = false) {
   return new Chart(ctx, {
     type: 'line',
     data: {
@@ -286,7 +296,7 @@ function buildSafetyChart(ctx) {
           fill: true,
           tension: 0.3,
           pointRadius: 0,
-          borderWidth: 2,
+          borderWidth: em ? 3 : 2,
         },
         scatterDs(ORANGE_SCATTER, 'Observed'),
       ],
@@ -298,7 +308,15 @@ function buildSafetyChart(ctx) {
       parsing: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: false },
+        legend: {
+            display: true,
+            onClick: () => {},
+            labels: {
+              boxWidth: em ? 18 : 14, padding: em ? 14 : 10, usePointStyle: true,
+              filter: (item, data) => data.datasets[item.datasetIndex].data.length > 0,
+              ...(em ? { font: { size: 15 } } : {}),
+            },
+          },
         tooltip: {
           callbacks: {
             title: items => `${items[0].chart.options.scales.x.title.text.replace('Time ', '')} ${items[0].parsed.x.toFixed(1)}`,
@@ -319,7 +337,7 @@ function buildSafetyChart(ctx) {
   });
 }
 
-function buildSafetyEventChart(ctx) {
+function buildSafetyEventChart(ctx, em = false) {
   return new Chart(ctx, {
     type: 'line',
     data: {
@@ -333,7 +351,7 @@ function buildSafetyEventChart(ctx) {
           tension: 0.3,
           pointRadius: 0,
           pointStyle: 'line',
-          borderWidth: 2.5,
+          borderWidth: em ? 3.5 : 2.5,
           order: 1,
         },
         {
@@ -346,11 +364,11 @@ function buildSafetyEventChart(ctx) {
           tension: 0,
           pointRadius: 0,
           pointStyle: 'line',
-          borderWidth: 1.5,
+          borderWidth: em ? 2.5 : 1.5,
           order: 2,
         },
-        kmDs(ORANGE_KM, 'Treatment (KM)'),
-        kmDs(GRAY_KM,   'Std. of Care (KM)'),
+        kmDs(ORANGE_KM, 'Treatment (KM)', em),
+        kmDs(GRAY_KM,   'Std. of Care (KM)', em),
       ],
     },
     options: {
@@ -364,8 +382,9 @@ function buildSafetyEventChart(ctx) {
           display: true,
           onClick: () => {},
           labels: {
-            boxWidth: 14, padding: 10, usePointStyle: true,
+            boxWidth: em ? 18 : 14, padding: em ? 14 : 10, usePointStyle: true,
             filter: (item, data) => data.datasets[item.datasetIndex].data.length > 0,
+            ...(em ? { font: { size: 15 } } : {}),
           },
         },
         tooltip: {
@@ -413,12 +432,16 @@ function setXAxis(chart, cfg) {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-function initCharts() {
-  chartConc        = buildConcChart(document.getElementById('chartConc').getContext('2d'));
-  chartBiomarker   = buildBiomarkerChart(document.getElementById('chartBiomarker').getContext('2d'));
-  chartBenefit     = buildBenefitSurvivalChart(document.getElementById('chartBenefit').getContext('2d'));
-  chartSafety      = buildSafetyChart(document.getElementById('chartSafety').getContext('2d'));
-  chartSafetyEvent = buildSafetyEventChart(document.getElementById('chartSafetyEvent').getContext('2d'));
+function initCharts(exportMode = false) {
+  if (exportMode) {
+    Chart.defaults.font.size = 16;
+    Chart.defaults.color     = '#222';
+  }
+  chartConc        = buildConcChart(document.getElementById('chartConc').getContext('2d'), exportMode);
+  chartBiomarker   = buildBiomarkerChart(document.getElementById('chartBiomarker').getContext('2d'), exportMode);
+  chartBenefit     = buildBenefitSurvivalChart(document.getElementById('chartBenefit').getContext('2d'), exportMode);
+  chartSafety      = buildSafetyChart(document.getElementById('chartSafety').getContext('2d'), exportMode);
+  chartSafetyEvent = buildSafetyEventChart(document.getElementById('chartSafetyEvent').getContext('2d'), exportMode);
 }
 
 /**

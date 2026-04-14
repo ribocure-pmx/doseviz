@@ -46,8 +46,8 @@ const MAX_DOSE = 10;  // mg — must match the slider's max attribute in index.h
 
 // ─── Observed-data simulation parameters ─────────────────────────────────────
 const OBS_CONC_CV        = 0.30;  // lognormal CV for PK observations
-const OBS_PD_CV          = 0.20;  // proportional CV for PD/safety observations
-const N_KM_PATIENTS      = 100;   // patients simulated per arm for KM curves
+const OBS_PD_CV          = 0.10;  // proportional CV for PD/safety observations
+const N_KM_PATIENTS      = 50;    // patients simulated per arm for KM curves
 // Sparse clinical sampling schedules (times in days)
 const OBS_TIMES_SHORT_PK = [0, 0.042, 0.083, 0.167, 0.25, 0.5, 1, 2, 3, 5, 7, 10, 14];
 const OBS_TIMES_LONG_PK  = [0, 7, 14, 28, 42, 56, 84, 112, 140, 168];
