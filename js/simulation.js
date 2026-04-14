@@ -44,6 +44,16 @@ const PARAMS = {
 // ─── Dose slider ceiling (used to fix the concentration y-axis) ───────────────
 const MAX_DOSE = 10;  // mg — must match the slider's max attribute in index.html
 
+// ─── Observed-data simulation parameters ─────────────────────────────────────
+const OBS_CONC_CV        = 0.30;  // lognormal CV for PK observations
+const OBS_PD_CV          = 0.20;  // proportional CV for PD/safety observations
+const N_KM_PATIENTS      = 100;   // patients simulated per arm for KM curves
+// Sparse clinical sampling schedules (times in days)
+const OBS_TIMES_SHORT_PK = [0, 0.042, 0.083, 0.167, 0.25, 0.5, 1, 2, 3, 5, 7, 10, 14];
+const OBS_TIMES_LONG_PK  = [0, 7, 14, 28, 42, 56, 84, 112, 140, 168];
+const OBS_TIMES_SHORT_PD = [0, 0.5, 1, 2, 3, 5, 7, 10, 14];
+const OBS_TIMES_LONG_PD  = [0, 7, 14, 28, 42, 56, 84, 112, 140, 168];
+
 // ─── Survival hazard constants ────────────────────────────────────────────────
 
 const LAMBDA_BENEFIT_SOC  = 0.006;  // day⁻¹  background progression hazard (SoC)
@@ -307,5 +317,144 @@ function runSimulation({ dose = 1, intervalDays = 1 } = {}) {
       safetyEventSurvival:  longSurvival.safetyEventSurvival,
       socSafetySurvival:    longSurvival.socSafetySurvival,
     },
+  };
+}
+
+// ─── Observed data generation ─────────────────────────────────────────────────
+
+/** Box-Muller standard normal sample. Guards against log(0). */
+function randNormal() {
+  let u1;
+  do { u1 = Math.random(); } while (u1 === 0);
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * Math.random());
+}
+
+/** Binary-search linear interpolation on a strictly-increasing times array. */
+function lerpAt(times, values, t) {
+  const n = times.length;
+  if (t <= times[0])     return values[0];
+  if (t >= times[n - 1]) return values[n - 1];
+  let lo = 0, hi = n - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (times[mid] <= t) lo = mid; else hi = mid;
+  }
+  const frac = (t - times[lo]) / (times[hi] - times[lo]);
+  return values[lo] + frac * (values[hi] - values[lo]);
+}
+
+/**
+ * Sample N event times from a survival curve via inverse CDF.
+ * survivalPct: 0–100 % scale, parallel to times.
+ * Returns N event times in days; value === endDay means censored at study end.
+ */
+function sampleEventTimes(times, survivalPct, N, endDay) {
+  const result = [];
+  for (let i = 0; i < N; i++) {
+    const u = Math.random();
+    let eventDay = endDay; // censored by default
+    for (let j = 1; j < times.length; j++) {
+      if (survivalPct[j] / 100 <= u) {
+        const s0 = survivalPct[j - 1] / 100, s1 = survivalPct[j] / 100;
+        const frac = (u - s0) / (s1 - s0);
+        eventDay = times[j - 1] + frac * (times[j] - times[j - 1]);
+        break;
+      }
+    }
+    result.push(eventDay);
+  }
+  return result;
+}
+
+/**
+ * Compute a Kaplan-Meier step-function from event times.
+ * censorTime: administrative end-of-study time (all t >= censorTime are censored).
+ * toX: converts days → chart x-axis units.
+ * survival=true  → KM survival %  (starts 100, decreases)
+ * survival=false → cumulative events % (starts 0, increases; = 100 - KM %)
+ * Returns [{x, y}] for Chart.js with stepped: 'after'.
+ */
+function computeKM(eventTimes, censorTime, toX, survival) {
+  const N = eventTimes.length;
+  const events = eventTimes.filter(t => t < censorTime - 1e-9).sort((a, b) => a - b);
+
+  const pts = [{ x: toX(0), y: survival ? 100 : 0 }];
+  let km = 1.0;
+  let atRisk = N;
+  let i = 0;
+
+  while (i < events.length) {
+    const t = events[i];
+    let d = 0;
+    while (i < events.length && events[i] < t + 1e-9) { d++; i++; }
+    km *= (1 - d / atRisk);
+    atRisk -= d;
+    pts.push({ x: toX(t), y: survival ? km * 100 : (1 - km) * 100 });
+  }
+
+  // Extend flat tail to end of chart
+  const lastX = toX(censorTime);
+  if (pts[pts.length - 1].x < lastX) {
+    pts.push({ x: lastX, y: pts[pts.length - 1].y });
+  }
+  return pts;
+}
+
+/**
+ * Generate sparse noisy "observed data" and Kaplan-Meier curves from a simulation result.
+ *
+ * @param {Object} simResult — return value of runSimulation()
+ * @param {string} view      — 'short' | 'long'
+ * @returns {{ concObs, biomarkerObs, safetyObs, benefitKM, socBenefitKM, safetyKM, socSafetyKM }}
+ */
+function generateObservedData(simResult, view) {
+  const isShort   = view === 'short';
+  const src       = isShort ? simResult.shortTerm : simResult.longTerm;
+  const pkTimes   = isShort ? OBS_TIMES_SHORT_PK : OBS_TIMES_LONG_PK;
+  const pdTimes   = isShort ? OBS_TIMES_SHORT_PD : OBS_TIMES_LONG_PD;
+  const endDay    = isShort ? 14 : 180;
+  const sigmaConc = Math.sqrt(Math.log(1 + OBS_CONC_CV * OBS_CONC_CV));
+  const toX       = isShort ? (d => d) : (d => +(d / 30).toFixed(4));
+
+  // ── Concentration: lognormal noise; skip t=0 (true value = 0 before absorption) ──
+  const concObs = [];
+  for (const tDay of pkTimes) {
+    const trueVal = lerpAt(src.times, src.conc, tDay);
+    if (trueVal <= 0) continue;
+    const obs = trueVal * Math.exp(sigmaConc * randNormal() - 0.5 * sigmaConc * sigmaConc);
+    if (obs > 0) concObs.push({ x: toX(tDay), y: obs });
+  }
+
+  // ── Biomarker: proportional normal noise, clamp >= 0 ──────────────────────
+  const biomarkerObs = [];
+  for (const tDay of pdTimes) {
+    const trueVal = lerpAt(src.times, src.biomarker, tDay);
+    const obs = trueVal * (1 + OBS_PD_CV * randNormal());
+    if (obs >= 0) biomarkerObs.push({ x: toX(tDay), y: obs });
+  }
+
+  // ── Safety biomarker: noise on raw level, shift to increase above baseline ─
+  const safetyObs = [];
+  for (const tDay of pdTimes) {
+    const trueLevel = lerpAt(src.times, src.safety, tDay);
+    const obsLevel  = trueLevel * (1 + OBS_PD_CV * randNormal());
+    const obsIncrease = obsLevel - 100;
+    if (obsIncrease >= 0) safetyObs.push({ x: toX(tDay), y: obsIncrease });
+  }
+
+  // ── KM curves: simulate N patients per arm via inverse CDF ────────────────
+  const benTrtTimes  = sampleEventTimes(src.times, src.benefitSurvival,     N_KM_PATIENTS, endDay);
+  const benSocTimes  = sampleEventTimes(src.times, src.socBenefitSurvival,  N_KM_PATIENTS, endDay);
+  const safTrtTimes  = sampleEventTimes(src.times, src.safetyEventSurvival, N_KM_PATIENTS, endDay);
+  const safSocTimes  = sampleEventTimes(src.times, src.socSafetySurvival,   N_KM_PATIENTS, endDay);
+
+  return {
+    concObs,
+    biomarkerObs,
+    safetyObs,
+    benefitKM:    computeKM(benTrtTimes, endDay, toX, true),   // event-free survival %
+    socBenefitKM: computeKM(benSocTimes, endDay, toX, true),
+    safetyKM:     computeKM(safTrtTimes, endDay, toX, false),  // cumulative events %
+    socSafetyKM:  computeKM(safSocTimes, endDay, toX, false),
   };
 }

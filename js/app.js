@@ -7,8 +7,9 @@
 
 'use strict';
 
-let currentView   = 'short';  // 'short' | 'long'
-let debounceTimer = null;
+let currentView      = 'short';  // 'short' | 'long'
+let debounceTimer    = null;
+let showObservedData = false;
 
 function readParams() {
   return {
@@ -30,7 +31,9 @@ function syncToggle() {
 }
 
 function refresh() {
-  updateCharts(runSimulation(readParams()), currentView);
+  const simResult = runSimulation(readParams());
+  const obsData   = showObservedData ? generateObservedData(simResult, currentView) : null;
+  updateCharts(simResult, currentView, obsData);
 }
 
 function debouncedRefresh() {
@@ -50,6 +53,11 @@ function init() {
   });
 
   document.getElementById('freqSelect').addEventListener('change', refresh);
+
+  document.getElementById('observedDataToggle').addEventListener('change', function () {
+    showObservedData = this.checked;
+    refresh();
+  });
 
   document.querySelectorAll('.toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => {

@@ -23,6 +23,45 @@ const ORANGE      = 'rgb(249, 115, 22)';
 const ORANGE_FILL = 'rgba(249, 115, 22, 0.09)';
 const GRAY        = 'rgba(100, 116, 139, 0.75)';
 
+// Dimmed variants used when observed data is visible
+const BLUE_DIM        = 'rgba(59, 130, 246, 0.20)';
+const BLUE_FILL_DIM   = 'rgba(59, 130, 246, 0.03)';
+const RED_DIM         = 'rgba(239, 68, 68,  0.20)';
+const RED_FILL_DIM    = 'rgba(239, 68, 68,  0.03)';
+const GREEN_DIM       = 'rgba(34, 197, 94,  0.20)';
+const ORANGE_DIM      = 'rgba(249, 115, 22, 0.20)';
+const ORANGE_FILL_DIM = 'rgba(249, 115, 22, 0.03)';
+const GRAY_DIM        = 'rgba(100, 116, 139, 0.25)';
+
+const BLUE_SCATTER   = 'rgba(59, 130, 246, 0.70)';
+const RED_SCATTER    = 'rgba(239, 68, 68,  0.70)';
+const ORANGE_SCATTER = 'rgba(249, 115, 22, 0.70)';
+const GREEN_KM       = 'rgba(34, 197, 94,  0.75)';
+const ORANGE_KM      = 'rgba(249, 115, 22, 0.75)';
+const GRAY_KM        = 'rgba(100, 116, 139, 0.75)';
+
+/** Scatter dataset (no connecting line, dots only). */
+function scatterDs(color, label) {
+  return {
+    label, data: [],
+    type: 'scatter',
+    borderColor: color, backgroundColor: color,
+    pointRadius: 4, pointStyle: 'circle', borderWidth: 1.5,
+    showLine: false, fill: false,
+  };
+}
+
+/** KM step-function dataset (dashed stepped line, no points). */
+function kmDs(color, label) {
+  return {
+    label, data: [],
+    borderColor: color, backgroundColor: 'transparent',
+    fill: false, tension: 0, stepped: 'after',
+    pointRadius: 0, borderWidth: 1.5,
+    borderDash: [4, 3],
+  };
+}
+
 let chartConc        = null;
 let chartBiomarker   = null;
 let chartBenefit     = null;
@@ -53,16 +92,19 @@ function buildConcChart(ctx) {
   return new Chart(ctx, {
     type: 'line',
     data: {
-      datasets: [{
-        label: 'Concentration (mg/L)',
-        data: [],
-        borderColor: BLUE,
-        backgroundColor: BLUE_FILL,
-        fill: true,
-        tension: 0.3,
-        pointRadius: 0,
-        borderWidth: 2,
-      }],
+      datasets: [
+        {
+          label: 'Concentration (mg/L)',
+          data: [],
+          borderColor: BLUE,
+          backgroundColor: BLUE_FILL,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0,
+          borderWidth: 2,
+        },
+        scatterDs(BLUE_SCATTER, 'Observed'),
+      ],
     },
     options: {
       animation: false,
@@ -123,6 +165,7 @@ function buildBiomarkerChart(ctx) {
           tension: 0,
           order: 2,
         },
+        scatterDs(RED_SCATTER, 'Observed'),
       ],
     },
     options: {
@@ -135,7 +178,10 @@ function buildBiomarkerChart(ctx) {
         legend: {
           display: true,
           onClick: () => {},
-          labels: { boxWidth: 14, padding: 10, usePointStyle: true },
+          labels: {
+            boxWidth: 14, padding: 10, usePointStyle: true,
+            filter: (item, data) => data.datasets[item.datasetIndex].data.length > 0,
+          },
         },
         tooltip: {
           filter: item => item.datasetIndex === 0,
@@ -188,6 +234,8 @@ function buildBenefitSurvivalChart(ctx) {
           borderWidth: 1.5,
           order: 2,
         },
+        kmDs(GREEN_KM, 'Treatment (KM)'),
+        kmDs(GRAY_KM,  'Std. of Care (KM)'),
       ],
     },
     options: {
@@ -200,7 +248,10 @@ function buildBenefitSurvivalChart(ctx) {
         legend: {
           display: true,
           onClick: () => {},
-          labels: { boxWidth: 14, padding: 10, usePointStyle: true },
+          labels: {
+            boxWidth: 14, padding: 10, usePointStyle: true,
+            filter: (item, data) => data.datasets[item.datasetIndex].data.length > 0,
+          },
         },
         tooltip: {
           callbacks: {
@@ -226,16 +277,19 @@ function buildSafetyChart(ctx) {
   return new Chart(ctx, {
     type: 'line',
     data: {
-      datasets: [{
-        label: 'Safety Biomarker Increase (%)',
-        data: [],
-        borderColor: ORANGE,
-        backgroundColor: ORANGE_FILL,
-        fill: true,
-        tension: 0.3,
-        pointRadius: 0,
-        borderWidth: 2,
-      }],
+      datasets: [
+        {
+          label: 'Safety Biomarker Increase (%)',
+          data: [],
+          borderColor: ORANGE,
+          backgroundColor: ORANGE_FILL,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0,
+          borderWidth: 2,
+        },
+        scatterDs(ORANGE_SCATTER, 'Observed'),
+      ],
     },
     options: {
       animation: false,
@@ -295,6 +349,8 @@ function buildSafetyEventChart(ctx) {
           borderWidth: 1.5,
           order: 2,
         },
+        kmDs(ORANGE_KM, 'Treatment (KM)'),
+        kmDs(GRAY_KM,   'Std. of Care (KM)'),
       ],
     },
     options: {
@@ -307,7 +363,10 @@ function buildSafetyEventChart(ctx) {
         legend: {
           display: true,
           onClick: () => {},
-          labels: { boxWidth: 14, padding: 10, usePointStyle: true },
+          labels: {
+            boxWidth: 14, padding: 10, usePointStyle: true,
+            filter: (item, data) => data.datasets[item.datasetIndex].data.length > 0,
+          },
         },
         tooltip: {
           callbacks: {
@@ -363,12 +422,13 @@ function initCharts() {
 }
 
 /**
- * Update all three charts with new simulation data.
+ * Update all charts with new simulation data.
  *
- * @param {Object} data  — result from runSimulation()
- * @param {string} view  — 'short' | 'long'
+ * @param {Object} data          — result from runSimulation()
+ * @param {string} view          — 'short' | 'long'
+ * @param {Object|null} obsData  — result from generateObservedData(), or null
  */
-function updateCharts(data, view) {
+function updateCharts(data, view, obsData) {
   const { shortTerm, longTerm } = data;
   const isShort = view === 'short';
 
@@ -382,32 +442,53 @@ function updateCharts(data, view) {
   // Baseline line endpoints follow the x-axis range
   const xEnd = isShort ? 14 : 6;
 
+  // Dim model curves when observed data is shown so the data reads foreground
+  const dim = !!obsData;
+  chartConc.data.datasets[0].borderColor      = dim ? BLUE_DIM      : BLUE;
+  chartConc.data.datasets[0].backgroundColor  = dim ? BLUE_FILL_DIM : BLUE_FILL;
+  chartBiomarker.data.datasets[0].borderColor     = dim ? RED_DIM      : RED;
+  chartBiomarker.data.datasets[0].backgroundColor = dim ? RED_FILL_DIM : RED_FILL;
+  chartBiomarker.data.datasets[1].borderColor     = dim ? 'rgba(100,100,100,0.15)' : 'rgba(100,100,100,0.4)';
+  chartBenefit.data.datasets[0].borderColor    = dim ? GREEN_DIM : GREEN;
+  chartBenefit.data.datasets[1].borderColor    = dim ? GRAY_DIM  : GRAY;
+  chartSafety.data.datasets[0].borderColor     = dim ? ORANGE_DIM      : ORANGE;
+  chartSafety.data.datasets[0].backgroundColor = dim ? ORANGE_FILL_DIM : ORANGE_FILL;
+  chartSafetyEvent.data.datasets[0].borderColor = dim ? ORANGE_DIM : ORANGE;
+  chartSafetyEvent.data.datasets[1].borderColor = dim ? GRAY_DIM   : GRAY;
+
   // Concentration — y-axis fixed to Cmax at max slider dose so scale never jumps
   setXAxis(chartConc, xCfg);
   chartConc.options.scales.y.max = niceYMax(src.concYMax);
   chartConc.data.datasets[0].data = xVals.map((x, i) => ({ x, y: src.conc[i] }));
+  chartConc.data.datasets[1].data = obsData ? obsData.concObs : [];
   chartConc.update('none');
 
   // Biomarker
   setXAxis(chartBiomarker, xCfg);
   chartBiomarker.data.datasets[0].data = xVals.map((x, i) => ({ x, y: src.biomarker[i] }));
   chartBiomarker.data.datasets[1].data = [{ x: 0, y: 100 }, { x: xEnd, y: 100 }];
+  chartBiomarker.data.datasets[2].data = obsData ? obsData.biomarkerObs : [];
   chartBiomarker.update('none');
 
-  // Benefit survival (treatment vs SoC)
+  // Benefit survival (treatment vs SoC) + KM step functions
   setXAxis(chartBenefit, xCfg);
   chartBenefit.data.datasets[0].data = xVals.map((x, i) => ({ x, y: src.benefitSurvival[i] }));
   chartBenefit.data.datasets[1].data = xVals.map((x, i) => ({ x, y: src.socBenefitSurvival[i] }));
+  chartBenefit.data.datasets[2].data = obsData ? obsData.benefitKM    : [];
+  chartBenefit.data.datasets[3].data = obsData ? obsData.socBenefitKM : [];
   chartBenefit.update('none');
 
   // Safety Biomarker (show increase above baseline: S − 100)
   setXAxis(chartSafety, xCfg);
   chartSafety.data.datasets[0].data = xVals.map((x, i) => ({ x, y: src.safety[i] - 100 }));
+  chartSafety.data.datasets[1].data = obsData ? obsData.safetyObs : [];
   chartSafety.update('none');
 
-  // Cumulative safety events: 100 − survival (increasing from 0)
+  // Cumulative safety events: 100 − survival (increasing from 0) + KM step functions
   setXAxis(chartSafetyEvent, xCfg);
   chartSafetyEvent.data.datasets[0].data = xVals.map((x, i) => ({ x, y: 100 - src.safetyEventSurvival[i] }));
   chartSafetyEvent.data.datasets[1].data = xVals.map((x, i) => ({ x, y: 100 - src.socSafetySurvival[i] }));
+  chartSafetyEvent.data.datasets[2].data = obsData ? obsData.safetyKM    : [];
+  chartSafetyEvent.data.datasets[3].data = obsData ? obsData.socSafetyKM : [];
   chartSafetyEvent.update('none');
 }
