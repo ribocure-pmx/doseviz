@@ -105,6 +105,24 @@ function init() {
   syncToggle();
   refresh();
 
+  // Model Details modal
+  const modelDetailsBtn   = document.getElementById('modelDetailsBtn');
+  const modelDetailsModal = document.getElementById('modelDetailsModal');
+  const modalCloseBtn     = document.getElementById('modalCloseBtn');
+
+  modelDetailsBtn.addEventListener('click', () => {
+    modelDetailsModal.hidden = false;
+  });
+  modalCloseBtn.addEventListener('click', () => {
+    modelDetailsModal.hidden = true;
+  });
+  modelDetailsModal.addEventListener('click', (e) => {
+    if (e.target === modelDetailsModal) modelDetailsModal.hidden = true;
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modelDetailsModal.hidden) modelDetailsModal.hidden = true;
+  });
+
   if (EXPORT_MODE) {
     document.querySelectorAll('.chart-card').forEach(card => {
       const canvas = card.querySelector('canvas');
