@@ -243,6 +243,20 @@ body {
   outline-offset: 2px;
 }
 
+.obs-toggle-switch input:disabled {
+  cursor: not-allowed;
+}
+
+.obs-toggle-switch input:disabled + .obs-toggle-track {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.obs-toggle-label:has(input:disabled) {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* Slider */
 input[type="range"] {
   -webkit-appearance: none;

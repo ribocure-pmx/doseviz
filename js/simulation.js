@@ -41,6 +41,20 @@ const PARAMS = {
   Emax_safety:  1.0,   // maximum inhibition of kout
 };
 
+// ─── Inter-individual variability (IIV) for population simulation ─────────────
+// ω values are lognormal standard deviations (log-scale SD).
+// Emax, n_safety, and Emax_safety are kept fixed (structural / identifiability).
+const IIV = {
+  ka:          0.45,  // ~46 % CV
+  CL:          0.35,  // ~36 % CV
+  V:           0.25,  // ~25 % CV
+  EC50:        0.50,  // ~52 % CV — PD typically more variable than PK
+  kout:        0.30,  // ~30 % CV
+  kbenefit:    0.40,  // ~41 % CV
+  kout_safety: 0.30,  // ~30 % CV
+  EC50_safety: 0.50,  // ~52 % CV
+};
+
 // ─── Dose slider ceiling (used to fix the concentration y-axis) ───────────────
 const MAX_DOSE = 10;  // mg — must match the slider's max attribute in index.html
 
@@ -183,18 +197,16 @@ function computeSurvival(times, benefit, safety) {
 // ─── Main simulation runner ───────────────────────────────────────────────────
 
 /**
- * Run the full simulation and return time-series data for both views.
+ * Core ODE integration for one parameter set.
+ * Called by runSimulation() (with PARAMS) and by runPopulationSimulation()
+ * (with sampled individual parameters).
  *
- * @param {Object} userParams
- * @param {number} userParams.dose          — dose per administration (mg), default 1
- * @param {number} userParams.intervalDays  — dosing interval (days), default 1
- *
- * @returns {Object}
- *   shortTerm: { times, conc, biomarker }   (0–14 days)
- *   longTerm:  { times, benefit }           (0–180 days)
+ * @param {number} dose         — mg per administration
+ * @param {number} intervalDays — dosing interval (days)
+ * @param {Object} p            — model parameter object (same shape as PARAMS)
+ * @returns {Object} — same shape as runSimulation()
  */
-function runSimulation({ dose = 1, intervalDays = 1 } = {}) {
-  const p = PARAMS;
+function _runSim(dose, intervalDays, p) {
 
   // ── Short-term pass (0–14 days, dt = 0.05 day) ────────────────────────────
   const dtShort  = 0.05;
@@ -320,6 +332,17 @@ function runSimulation({ dose = 1, intervalDays = 1 } = {}) {
   };
 }
 
+/**
+ * Public entry point — runs the typical-patient simulation using fixed PARAMS.
+ *
+ * @param {Object} userParams
+ * @param {number} userParams.dose          — mg per administration (default 1)
+ * @param {number} userParams.intervalDays  — dosing interval in days (default 1)
+ */
+function runSimulation({ dose = 1, intervalDays = 1 } = {}) {
+  return _runSim(dose, intervalDays, PARAMS);
+}
+
 // ─── Observed data generation ─────────────────────────────────────────────────
 
 /** Box-Muller standard normal sample. Guards against log(0). */
@@ -327,6 +350,67 @@ function randNormal() {
   let u1;
   do { u1 = Math.random(); } while (u1 === 0);
   return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * Math.random());
+}
+
+/**
+ * Sample a set of individual parameters from the population IIV distribution.
+ * Uses bias-corrected lognormal: P_i = P_typical × exp(η·ω − ω²/2)
+ * so that E[P_i] = P_typical (mean-preserving).
+ */
+function sampleIndividualParams() {
+  const eta = (omega) => Math.exp(randNormal() * omega - 0.5 * omega * omega);
+  return {
+    ...PARAMS,
+    ka:          PARAMS.ka          * eta(IIV.ka),
+    CL:          PARAMS.CL          * eta(IIV.CL),
+    V:           PARAMS.V           * eta(IIV.V),
+    EC50:        PARAMS.EC50        * eta(IIV.EC50),
+    kout:        PARAMS.kout        * eta(IIV.kout),
+    kbenefit:    PARAMS.kbenefit    * eta(IIV.kbenefit),
+    kout_safety: PARAMS.kout_safety * eta(IIV.kout_safety),
+    EC50_safety: PARAMS.EC50_safety * eta(IIV.EC50_safety),
+  };
+}
+
+/**
+ * Linear interpolation for a quantile from a sorted Float64Array.
+ * @param {Float64Array} sorted — must be sorted ascending
+ * @param {number}       q      — quantile in [0, 1]
+ */
+function pctile(sorted, q) {
+  const n = sorted.length;
+  const idx = q * (n - 1);
+  const lo = Math.floor(idx), hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] + (idx - lo) * (sorted[hi] - sorted[lo]);
+}
+
+/**
+ * Compute 5th, 10th, 50th, 90th, 95th percentile profiles across a population.
+ *
+ * @param {Array<number[]>} matrix — matrix[individual][timepoint]
+ * @returns {{ p5, p10, p50, p90, p95 }} — each an ordinary number[]
+ */
+function computePopPercentiles(matrix) {
+  const T   = matrix[0].length;
+  const N   = matrix.length;
+  const p5  = new Array(T);
+  const p10 = new Array(T);
+  const p50 = new Array(T);
+  const p90 = new Array(T);
+  const p95 = new Array(T);
+  const col = new Float64Array(N);   // reusable typed buffer — sorts numerically
+
+  for (let t = 0; t < T; t++) {
+    for (let i = 0; i < N; i++) col[i] = matrix[i][t];
+    col.sort();
+    p5[t]  = pctile(col, 0.05);
+    p10[t] = pctile(col, 0.10);
+    p50[t] = pctile(col, 0.50);
+    p90[t] = pctile(col, 0.90);
+    p95[t] = pctile(col, 0.95);
+  }
+  return { p5, p10, p50, p90, p95 };
 }
 
 /** Binary-search linear interpolation on a strictly-increasing times array. */
@@ -456,5 +540,78 @@ function generateObservedData(simResult, view) {
     socBenefitKM: computeKM(benSocTimes, endDay, toX, true),
     safetyKM:     computeKM(safTrtTimes, endDay, toX, false),  // cumulative events %
     socSafetyKM:  computeKM(safSocTimes, endDay, toX, false),
+  };
+}
+
+// ─── Population simulation ────────────────────────────────────────────────────
+
+/**
+ * Simulate a population of N individuals with log-normally distributed PK/PD
+ * parameters and return percentile profiles for ribbon visualisation.
+ *
+ * Results are computed once and should be cached by the caller when parameters
+ * have not changed.
+ *
+ * @param {Object} opts
+ * @param {number} opts.dose          — mg per administration (default 1)
+ * @param {number} opts.intervalDays  — dosing interval in days (default 1)
+ * @param {number} opts.N             — number of simulated individuals (default 100)
+ *
+ * @returns {Object}
+ *   shortTerm / longTerm — each contains:
+ *     times        {number[]}
+ *     conc         {{ p5, p10, p50, p90, p95 }}   mg/L
+ *     biomarker    {{ p5, p10, p50, p90, p95 }}   %
+ *     benefit      {{ p5, p10, p50, p90, p95 }}   event-free survival %
+ *     safety       {{ p5, p10, p50, p90, p95 }}   increase above baseline %
+ *     safetyEvent  {{ p5, p10, p50, p90, p95 }}   cumulative events %
+ */
+function runPopulationSimulation({ dose = 1, intervalDays = 1, N = 100 } = {}) {
+  const sConc      = [], sBio  = [], sBen  = [], sSaf  = [], sSafEv = [];
+  const lConc      = [], lBio  = [], lBen  = [], lSaf  = [], lSafEv = [];
+  let shortTimes, longTimes;
+
+  for (let i = 0; i < N; i++) {
+    const p = sampleIndividualParams();
+    const r = _runSim(dose, intervalDays, p);
+
+    if (i === 0) {
+      shortTimes = r.shortTerm.times;
+      longTimes  = r.longTerm.times;
+    }
+
+    // Short-term arrays — apply display transforms in advance so percentiles
+    // are computed on the values that will actually be charted.
+    sConc.push(r.shortTerm.conc);
+    sBio.push(r.shortTerm.biomarker);
+    sBen.push(r.shortTerm.benefitSurvival);
+    sSaf.push(r.shortTerm.safety.map(s => Math.max(0, s - 100)));
+    sSafEv.push(r.shortTerm.safetyEventSurvival.map(s => 100 - s));
+
+    // Long-term arrays
+    lConc.push(r.longTerm.conc);
+    lBio.push(r.longTerm.biomarker);
+    lBen.push(r.longTerm.benefitSurvival);
+    lSaf.push(r.longTerm.safety.map(s => Math.max(0, s - 100)));
+    lSafEv.push(r.longTerm.safetyEventSurvival.map(s => 100 - s));
+  }
+
+  return {
+    shortTerm: {
+      times:       shortTimes,
+      conc:        computePopPercentiles(sConc),
+      biomarker:   computePopPercentiles(sBio),
+      benefit:     computePopPercentiles(sBen),
+      safety:      computePopPercentiles(sSaf),
+      safetyEvent: computePopPercentiles(sSafEv),
+    },
+    longTerm: {
+      times:       longTimes,
+      conc:        computePopPercentiles(lConc),
+      biomarker:   computePopPercentiles(lBio),
+      benefit:     computePopPercentiles(lBen),
+      safety:      computePopPercentiles(lSaf),
+      safetyEvent: computePopPercentiles(lSafEv),
+    },
   };
 }

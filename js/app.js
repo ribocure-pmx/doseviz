@@ -12,6 +12,11 @@ const EXPORT_MODE = new URLSearchParams(window.location.search).has('export');
 let currentView      = 'short';  // 'short' | 'long'
 let debounceTimer    = null;
 let showObservedData = false;
+let showPopulation   = false;
+
+// Cache for population simulation results — keyed by "dose_interval"
+let cachedPopData = null;
+let cachedPopKey  = null;
 
 function readParams() {
   return {
@@ -33,9 +38,21 @@ function syncToggle() {
 }
 
 function refresh() {
-  const simResult = runSimulation(readParams());
+  const params    = readParams();
+  const simResult = runSimulation(params);
   const obsData   = showObservedData ? generateObservedData(simResult, currentView) : null;
-  updateCharts(simResult, currentView, obsData);
+
+  let popData = null;
+  if (showPopulation) {
+    const key = `${params.dose}_${params.intervalDays}`;
+    if (key !== cachedPopKey) {
+      cachedPopData = runPopulationSimulation(params);
+      cachedPopKey  = key;
+    }
+    popData = cachedPopData;
+  }
+
+  updateCharts(simResult, currentView, obsData, popData);
 }
 
 function debouncedRefresh() {
@@ -59,6 +76,20 @@ function init() {
 
   document.getElementById('observedDataToggle').addEventListener('change', function () {
     showObservedData = this.checked;
+    refresh();
+  });
+
+  document.getElementById('populationToggle').addEventListener('change', function () {
+    showPopulation = this.checked;
+    const obsToggle = document.getElementById('observedDataToggle');
+    if (showPopulation) {
+      // Observed data is incompatible with population mode — disable and clear it
+      obsToggle.checked  = false;
+      obsToggle.disabled = true;
+      showObservedData   = false;
+    } else {
+      obsToggle.disabled = false;
+    }
     refresh();
   });
 
