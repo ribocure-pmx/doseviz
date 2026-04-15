@@ -37,3 +37,11 @@ Then open [http://localhost:8080](http://localhost:8080).
 ## Model
 
 One-compartment PK model with first-order absorption, indirect response PD model (kin inhibition), and a first-order clinical benefit accumulation driven by biomarker suppression. See [CLAUDE.md](CLAUDE.md) for full parameter documentation.
+
+## License
+
+Copyright &copy; 2026 Sebastian Ueckert, Ribocure Pharmaceuticals AB
+
+Licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
+
+You are free to share and adapt this work for any purpose, provided you give appropriate credit to **Sebastian Ueckert** and **Ribocure Pharmaceuticals AB** and link back to the original.

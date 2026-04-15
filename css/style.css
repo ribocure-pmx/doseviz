@@ -698,3 +698,20 @@ body.export-mode .chart-card {
 .save-png-btn:hover {
   opacity: 1;
 }
+
+/* ─── Footer ────────────────────────────────────────────────────────────────── */
+
+.site-footer {
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.78rem;
+  color: var(--muted, #6B7280);
+  border-top: 1px solid var(--border, #E5E7EB);
+  margin-top: 1.5rem;
+}
+
+.site-footer a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
